@@ -1,6 +1,6 @@
 {
-  "name": "sauce-tunnel",
-  "version": "2.5.0",
+  "name": "@belym.a.2105/sauce-tunnel",
+  "version": "2.5.1",
   "description": "A wrapper around the Sauce Labs tunnel jar",
   "main": "index.js",
   "scripts": {
@@ -15,7 +15,8 @@
   ],
   "authors": [
     "Parashuram <code@nparashuram.com>",
-    "Justin Reidy <jmreidy@rzrsharp.net>"
+    "Justin Reidy <jmreidy@rzrsharp.net>",
+    "Andrey Belym <belym.a.2105@gmail.com>"
   ],
   "license": "MIT",
   "dependencies": {
