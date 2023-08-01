@@ -1,20 +1,37 @@
 /* npm */
-var chalk = require('chalk');
-var request = require('request').defaults({jar:false});
-var split = require('split');
+const chalk = require('chalk');
+const split = require('split');
+const axios = require('axios');
 
 /* core */
-var util = require('util');
-var os = require('os');
-var path = require('path');
-var proc = require('child_process');
-var EventEmitter = require('events').EventEmitter;
-var binaries = {
+const util = require('util');
+const os   = require('os');
+const path = require('path');
+const proc = require('child_process');
+
+const EventEmitter = require('events').EventEmitter;
+
+const binaries = {
   'darwin': 'sc',
   'linux': 'sc',
   'linux32': 'sc',
   'win32': 'sc.exe'
 };
+
+
+async function request ({ method, url }, callback) {
+    try {
+      const res = await axios({
+        method,
+        url,
+        responseType: 'json',
+      })
+
+      callback(null, res);
+    } catch (e) {
+      callback(e);
+    }
+}
 
 module.exports = SauceTunnel;
 
@@ -32,53 +49,51 @@ function SauceTunnel(user, key, identifier, tunneled, extraFlags) {
 util.inherits(SauceTunnel, EventEmitter);
 
 SauceTunnel.prototype.openTunnel = function(callback) {
-  var me = this;
   // win32, darwin or linux
-  var platform = os.platform();
+  let platform = os.platform();
 
   // Special case: 32bit linux?
   platform += (platform === 'linux' && os.arch() === 'ia32') ? '32' : '';
 
-  var executable = binaries[platform];
+  const executable = binaries[platform];
   if (!executable) {
     throw new Error(platform + ' platform is not supported');
   }
-  var args = ['-u', this.user, '-k', this.key];
+  let args = ['-u', this.user, '-k', this.key];
   if (this.identifier) {
     args.push("-i", this.identifier);
   }
   if (this.extraFlags) {
     args = args.concat(this.extraFlags);
   }
-  var cmd = path.join(__dirname, 'vendor', platform, 'bin/', executable);
+  const cmd = path.join(__dirname, 'vendor', platform, 'bin/', executable);
 
   this.proc = proc.spawn(cmd, args);
   callback.called = false;
 
-  this.proc.stdout.pipe(split()).on('data', function(data) {
+  this.proc.stdout.pipe(split()).on('data', (data) => {
     if (!data.match(/^\[-u,/g)) {
-      me.emit('verbose:debug', data);
+      this.emit('verbose:debug', data);
     }
     if (data.match(/Sauce Connect is up, you may start your tests/)) {
-      me.emit('verbose:ok', '=> Sauce Labs Tunnel established');
+      this.emit('verbose:ok', '=> Sauce Labs Tunnel established');
       if (!callback.called) {
         callback.called = true;
         callback(true);
       }
     }
-    var match = data.match(/Tunnel ID\: ([a-z0-9]{32})/);
+    const match = data.match(/Tunnel ID\: ([a-z0-9]{32})/);
     if (match) {
-      me.id = match[1];
+      this.id = match[1];
     }
   });
 
-  this.proc.stderr.pipe(split()).on('data', function(data) {
-    me.emit('log:error', data);
+  this.proc.stderr.pipe(split()).on('data', (data) => {
+    this.emit('log:error', data);
   });
 
-  var self = this;
-  this.proc.on('exit', function(code) {
-    me.emit('verbose:ok', 'Sauce Labs Tunnel disconnected ', code);
+  this.proc.on('exit', (code) => {
+    this.emit('verbose:ok', 'Sauce Labs Tunnel disconnected ', code);
     if (!callback.called) {
       callback.called = true;
       callback(false);
@@ -88,9 +103,9 @@ SauceTunnel.prototype.openTunnel = function(callback) {
 
 SauceTunnel.prototype.getTunnels = function(callback) {
   request({
+    method: 'GET',
     url: this.baseUrl + '/tunnels',
-    json: true
-  }, function(err, resp, body) {
+  }, (err, resp, body) => {
     callback(body);
   });
 };
@@ -104,8 +119,7 @@ SauceTunnel.prototype.killTunnel = function(callback) {
   request({
     method: "DELETE",
     url: this.baseUrl + "/tunnels/" + this.id,
-    json: true
-  }, function (err, resp, body) {
+  }, (err, resp, body) => {
     if (!err && resp.statusCode === 200) {
       this.emit('verbose:debug', 'Tunnel Closed');
     }
@@ -113,11 +127,10 @@ SauceTunnel.prototype.killTunnel = function(callback) {
       this.emit('log:error', 'Error closing tunnel');
     }
     callback(err);
-  }.bind(this));
+  });
 };
 
 SauceTunnel.prototype.start = function(callback) {
-  var me = this;
   if (!this.tunneled) {
     return callback(true);
   }
@@ -128,19 +141,18 @@ SauceTunnel.prototype.start = function(callback) {
 };
 
 SauceTunnel.prototype.stop = function (callback) {
-  var self = this,
-    callbackArg;
+  let callbackArg;
 
   this.proc.on('exit', function () {
     callback(callbackArg);
   });
 
-  this.killTunnel(function (err) {
+  this.killTunnel((err) => {
     // When deleting the tunnel via the REST API succeeds, then Sauce Connect exits automatically.
     // Otherwise kill the process. Don't care with the tunnel, it will time out.
     if (err) {
       callbackArg = err;
-      self.proc.kill();
+      this.proc.kill();
     }
   });
 };
