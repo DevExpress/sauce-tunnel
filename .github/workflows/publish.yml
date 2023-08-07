@@ -11,5 +11,8 @@ jobs:
     environment: release
     steps:
       - uses: DevExpress/testcafe-build-system/actions/publish-with-publish-please@main
+        env:
+          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
         with:
           token: ${{ secrets.NPM_TOKEN }}
