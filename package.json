@@ -28,5 +28,11 @@
   },
   "devDependencies": {
     "publish-please": "^5.5.2"
+  },
+  "overrides": {
+    "publish-please": {
+      "lodash": "^4.17.21",
+      "semver": "^5.7.2"
+    }
   }
 }
