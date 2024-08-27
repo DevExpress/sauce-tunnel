@@ -27,12 +27,6 @@
     "split": "^1.0.0"
   },
   "devDependencies": {
-    "publish-please": "^5.5.2"
-  },
-  "overrides": {
-    "publish-please": {
-      "lodash": "^4.17.21",
-      "semver": "^5.7.2"
-    }
+    "@testcafe/publish-please": "^5.6.0"
   }
 }
