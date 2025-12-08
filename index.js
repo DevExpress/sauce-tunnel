@@ -19,12 +19,13 @@ const binaries = {
 };
 
 
-async function request ({ method, url }, callback) {
+async function request ({ method, url, auth }, callback) {
     try {
       const res = await axios({
         method,
         url,
         responseType: 'json',
+        auth,
       })
 
       callback(null, res);
@@ -41,7 +42,8 @@ function SauceTunnel(user, key, identifier, tunneled, extraFlags) {
   this.key = key;
   this.identifier = identifier || 'Tunnel'+new Date().getTime();
   this.tunneled = (tunneled == null) ? true : tunneled;
-  this.baseUrl = ["https://", this.user, ':', this.key, '@saucelabs.com', '/rest/v1/', this.user].join("");
+  this.baseUrl = ["https://api.us-west-1.saucelabs.com/rest/v1/", this.user].join("");
+  
   this.extraFlags = extraFlags;
   this.id = null;
 }
@@ -59,16 +61,21 @@ SauceTunnel.prototype.openTunnel = function(callback) {
   if (!executable) {
     throw new Error(platform + ' platform is not supported');
   }
-  let args = ['-u', this.user, '-k', this.key];
-  if (this.identifier) {
-    args.push("-i", this.identifier);
-  }
+  const args = ['run'];
+
+  args.push('--tunnel-name', this.identifier);
+  args.push('--region', 'us-west-1');
   if (this.extraFlags) {
     args = args.concat(this.extraFlags);
   }
   const cmd = path.join(__dirname, 'vendor', platform, 'bin/', executable);
 
-  this.proc = proc.spawn(cmd, args);
+  this.proc = proc.spawn(cmd, args, {
+  env: {
+    SAUCE_USERNAME: this.user,
+    SAUCE_ACCESS_KEY: this.key,
+  }
+});
   callback.called = false;
 
   this.proc.stdout.pipe(split()).on('data', (data) => {
@@ -82,7 +89,7 @@ SauceTunnel.prototype.openTunnel = function(callback) {
         callback(true);
       }
     }
-    const match = data.match(/Tunnel ID\: ([a-z0-9]{32})/);
+    const match = data.match(/id=([a-f0-9]{32})/i);
     if (match) {
       this.id = match[1];
     }
@@ -105,8 +112,12 @@ SauceTunnel.prototype.getTunnels = function(callback) {
   request({
     method: 'GET',
     url: this.baseUrl + '/tunnels',
-  }, (err, resp, body) => {
-    callback(body);
+    auth: {
+      username: this.user,
+      password: this.key,
+    }
+  }, (err, resp) => {
+    callback(resp.data);
   });
 };
 
@@ -119,8 +130,12 @@ SauceTunnel.prototype.killTunnel = function(callback) {
   request({
     method: "DELETE",
     url: this.baseUrl + "/tunnels/" + this.id,
-  }, (err, resp, body) => {
-    if (!err && resp.statusCode === 200) {
+    auth: {
+      username: this.user,
+      password: this.key,
+    }
+  }, (err, resp) => {
+    if (!err && resp.status === 200) {
       this.emit('verbose:debug', 'Tunnel Closed');
     }
     else {
