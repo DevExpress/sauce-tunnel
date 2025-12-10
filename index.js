@@ -42,7 +42,8 @@ function SauceTunnel(user, key, identifier, tunneled, extraFlags) {
   this.key = key;
   this.identifier = identifier || 'Tunnel'+new Date().getTime();
   this.tunneled = (tunneled == null) ? true : tunneled;
-  this.baseUrl = ["https://api.us-west-1.saucelabs.com/rest/v1/", this.user].join("");
+  this.region = 'us-west-1';
+  this.baseUrl = `https://api.${this.region}.saucelabs.com/rest/v1/${this.user}`;
   
   this.extraFlags = extraFlags;
   this.id = null;
@@ -61,21 +62,23 @@ SauceTunnel.prototype.openTunnel = function(callback) {
   if (!executable) {
     throw new Error(platform + ' platform is not supported');
   }
-  const args = ['run'];
+  let args = ['run'];
 
-  args.push('--tunnel-name', this.identifier);
-  args.push('--region', 'us-west-1');
+  if (this.identifier) {
+    args.push("--tunnel-name", this.identifier);
+  }
+  args.push('--region', this.region);
   if (this.extraFlags) {
     args = args.concat(this.extraFlags);
   }
   const cmd = path.join(__dirname, 'vendor', platform, 'bin/', executable);
 
   this.proc = proc.spawn(cmd, args, {
-  env: {
-    SAUCE_USERNAME: this.user,
-    SAUCE_ACCESS_KEY: this.key,
-  }
-});
+    env: {
+      SAUCE_USERNAME: this.user,
+      SAUCE_ACCESS_KEY: this.key,
+    }
+  });
   callback.called = false;
 
   this.proc.stdout.pipe(split()).on('data', (data) => {
@@ -117,6 +120,10 @@ SauceTunnel.prototype.getTunnels = function(callback) {
       password: this.key,
     }
   }, (err, resp) => {
+    if (err || !resp) {
+      callback(err || new Error('No response'));
+      return;
+    }
     callback(resp.data);
   });
 };
@@ -135,7 +142,7 @@ SauceTunnel.prototype.killTunnel = function(callback) {
       password: this.key,
     }
   }, (err, resp) => {
-    if (!err && resp.status === 200) {
+    if (!err && resp && resp.status === 200) {
       this.emit('verbose:debug', 'Tunnel Closed');
     }
     else {
