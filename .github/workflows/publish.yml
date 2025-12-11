@@ -4,15 +4,24 @@ on:
   release:
     types: [published]
 
+permissions:
+  id-token: write  # Required for OIDC (Trusted Publishing)
+  contents: read
+
 jobs:
   publish:
     if: ${{ !github.event.release.draft }}
     runs-on: ubuntu-latest
-    environment: release
+    environment: npmjs
     steps:
-      - uses: DevExpress/testcafe-build-system/actions/publish-with-publish-please@main
-        env:
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.NPM_TOKEN }}
+          ref: ${{ github.event.release.target_commitish }}
+      - run: git fetch --force --tags
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm ci
+      - run: npm run publish-please
