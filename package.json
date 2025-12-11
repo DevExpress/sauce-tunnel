@@ -1,7 +1,11 @@
 {
-  "name": "@belym.a.2105/sauce-tunnel",
+  "name": "@devexpress/sauce-tunnel",
   "version": "3.0.0",
   "description": "A wrapper around the Sauce Labs tunnel jar",
+  "author": {
+    "name": "Developer Express Inc.",
+    "url": "https://www.devexpress.com/"
+  },
   "main": "index.js",
   "scripts": {
     "test": "node ./test/sanity",
@@ -10,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jmreidy/sauce-tunnel"
+    "url": "https://github.com/DevExpress/sauce-tunnel"
   },
   "keywords": [
     "Saucelabs"
