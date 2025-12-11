@@ -1,6 +1,6 @@
 {
   "name": "@devexpress/sauce-tunnel",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "A wrapper around the Sauce Labs tunnel jar",
   "author": {
     "name": "Developer Express Inc.",
