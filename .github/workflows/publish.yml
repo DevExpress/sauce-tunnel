@@ -4,11 +4,15 @@ on:
   release:
     types: [published]
 
+permissions:
+  id-token: write  # Required for OIDC (Trusted Publishing)
+  contents: read
+
 jobs:
   publish:
     if: ${{ !github.event.release.draft }}
     runs-on: ubuntu-latest
-    environment: release
+    environment: npmjs
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,6 +26,5 @@ jobs:
       - run: npm ci
       - run: npm run publish-please
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
           SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
           SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
